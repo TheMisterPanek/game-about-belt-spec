@@ -18,6 +18,17 @@ bounded is what makes a large world affordable (CONSTITUTION Art. VI).
    Inactive cells are handled by `CoarseProductionSystem` (S05).
 4. Selection is deterministic given the same inputs (view state, pins, dirty set).
 
+### Warm-up termination (Dirty cell stabilization)
+A `Dirty` cell remains active until its `ProductionProfile` is valid (see `F05 S04`). 
+The profile becomes `valid = true` when both of these conditions hold for **K = 10 
+consecutive ticks**:
+- The profile has not changed (output rates and demands identical to the prior tick).
+- The maximum rate change across any `RateEntry` (input or output) is ≤ **1 unit/s** 
+  (absolute tolerance).
+
+If either condition fails, the counter resets. Once both hold for K ticks, the 
+`Dirty` flag clears in that tick and the cell may demote on the next scheduler cycle.
+
 ## Data touched
 `ActiveTag` (add/remove); reads camera/view state and pin set; `Dirty`.
 

@@ -9,13 +9,30 @@ deterministic splitting/merging so large factory graphs behave reproducibly.
 
 ## Behavior
 1. Roads connect into chains and junctions. A cell/road feeding multiple downstreams
-   **splits** its available units among them in a documented deterministic rule (e.g.
-   round-robin by ascending destination coord). A junction fed by multiple upstreams
-   **merges** by a documented order.
+   **splits** its available units among them in a documented deterministic rule (see 
+   below). A junction fed by multiple upstreams **merges** by a documented order.
 2. Splitting respects each downstream's capacity: a full downstream is skipped that
    tick and its share offered to the next, deterministically.
 3. The whole network conserves material end-to-end and reaches a deterministic
    steady-state distribution governed by the bottleneck stage.
+
+### Splitting rule (one source → many downstreams)
+When a source (a `MacroOutput.buffer` or `RoadSegment`) has multiple outbound 
+destinations (neighboring cells or roads):
+
+1. **Sort destinations** by ascending `(x, y)` coordinate, with `x` as the primary key.
+2. **Each tick**, attempt to send units in that sorted order, respecting each 
+   destination's capacity:
+   - Offer the first destination up to `available / num_downstreams` units.
+   - Any units refused (due to full buffer) are offered to the next destination.
+   - Each destination gets one "turn" per tick; if it refuses, its quota does not 
+     roll to others that same tick (it will be retried next tick).
+3. **Tie-breaker:** if two destinations have identical `(x, y)` (impossible in a 
+   normal grid but handle for completeness), use the ascending entity id of the 
+   destination.
+
+**Why:** Fixed order ensures consistent delivery patterns across runs. The 
+per-destination quota prevents a single hungry sink from starving others.
 
 ## Data touched
 Multiple `RoadSegment`s, `MacroOutput.buffer`s, manufacturer inputs.

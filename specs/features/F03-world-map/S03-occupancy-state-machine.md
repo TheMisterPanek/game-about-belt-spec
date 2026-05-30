@@ -20,6 +20,25 @@ legal transitions only, so the macro map stays consistent.
    Manufacturers have none.
 4. Illegal transitions are rejected without mutating state (F03-A2).
 
+### Micro grid lifecycle (Invariant I3 enforcement)
+
+- **Creation:** When a cell transitions `Wild → Mine` (via command `developCell`), a 
+  new `MicroGrid` is created and linked to the cell. The micro grid is populated with 
+  empty tiles; it persists for the lifetime of the mine unless explicitly cleared.
+- **Deletion on occupancy change:** When a cell transitions out of `Mine` 
+  (`Mine → Road`, `Mine → Manufacturer`, or `Mine → Wild`), the `micro` grid is 
+  deleted and the cell's `micro` field is set to absent.
+- **Deletion on demotion:** When an active `Mine` cell is demoted by the LOD scheduler 
+  (F01 S06), the micro entities are deleted; the `micro` grid itself persists (it is 
+  not deleted by demotion, only by occupancy change).
+- **Persistence through active/coarse cycles:** A `Mine` cell's micro grid layout is 
+  never deleted by promotion/demotion; only by occupancy change. This allows the cell 
+  to be promoted again without reconstructing the layout from scratch.
+
+**Why:** The micro grid is the persistent *blueprint* of the mine (where buildings 
+are); micro entities are the transient *runtime state*. Demotion removes runtime state 
+but keeps the blueprint. Occupancy change removes both.
+
 ## Data touched
 `Cell.occupancy`, `Cell.micro`.
 

@@ -18,6 +18,18 @@ Move items across the floor on directional belts that carry **one** resource typ
    back-pressures upstream so items do not overlap or vanish.
 4. All movement is `Fixed`/integer; no item is created or lost in transport.
 
+### Belt advancement order
+`BeltSystem` iterates belts by **ascending entity id**. For each belt:
+1. Advance all items in its slots one position toward the output.
+2. If the output is blocked (the downstream has no space, or a resource conflict):
+   - Do not advance; mark the belt blocked.
+   - Upstream systems (MinerSystem, junction hand-offs) will respect back-pressure 
+     and not push new items.
+
+**Why:** Serial ID-order advancement ensures items never overlap or vanish. Advancing 
+belt B1 before B2 → B1's output means B1 commits output space before B2 tries to 
+claim it, preventing collision.
+
 ## Data touched
 `BeltState` (dir, resource, slots).
 

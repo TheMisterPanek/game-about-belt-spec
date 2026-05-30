@@ -20,6 +20,29 @@ implementation agree exactly.
 4. Real numbers may appear only in presentation (camera, interpolation) and never in
    any value read by a system.
 
+### Operation order for cross-language bit-for-bit matching
+
+All fixed-point arithmetic must use the following operation orders:
+
+- **Coarse production rate:** `units = floor((rate × Δt) + prior_remainder)`, where 
+  `rate × Δt` is computed in `Fixed` arithmetic before the floor.
+- **Starvation scaling (F01 S05):** `scaled_rate = (rate × available) / demanded`, 
+  multiply first, then divide (never divide first).
+- **Demotion inventory folding (F01 S06):** item counts are added directly as integer 
+  units; no fractional slots are rounded or discarded in-place. All items present are 
+  counted exactly.
+
+In general: **multiply before divide** to minimize rounding loss; **carry remainders 
+forward** across ticks; **never convert to Real and back**.
+
+## Rounding carry example
+Given a miner at rate `r = 10.5 units/s` (10752/1024 in Fixed), `Δt = 1/30 s`:
+- Tick 1: `(10752/1024) × (1/30) = 10752 / 30720 ≈ 0.35 units`. Floor = 0, carry = 0.35.
+- Tick 2: `0.35 + (10752 / 30720) = 0.70`. Floor = 0, carry = 0.70.
+- Tick 3: `0.70 + (10752 / 30720) ≈ 1.05`. Floor = 1, carry = 0.05.
+
+After 30 ticks: 10 units emitted, 0.5 carried (matching the rate of 10.5).
+
 ## Data touched
 All `Fixed` fields (`MinerState.rate`, `AssemblerState.progress`, `RateEntry.rate`,
 `RoadSegment.rate`, …); discrete buffers they feed.

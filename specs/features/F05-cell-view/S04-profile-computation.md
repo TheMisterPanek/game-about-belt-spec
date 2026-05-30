@@ -13,12 +13,36 @@ demotion-enabling bridge and a linchpin of P-LOD.
    export rate per resource (at its `OutputPort`s) and its steady-state input demand
    (resources consumed from inbound roads), writing them as
    `ProductionProfile.outputs` / `demands` (`RateEntry` vectors, `Fixed`).
-2. "Steady state" is measured over a window; while a cell is `Dirty` (recently edited)
-   or its rates vary beyond a threshold, the profile is marked `valid = false` and the
-   scheduler keeps the cell active (F01 S04, §8).
-3. Once rates stabilize, the system sets `valid = true` and clears `Dirty`.
+
+2. **Steady-state detection:** ProfileUpdateSystem maintains a rolling history of the 
+   cell's observed output rates over the last **K = 20 ticks**. When a cell is marked 
+   `Dirty`, the history is cleared.
+   - Each tick, the system computes the cell's current output rate per resource 
+     (units per second, `Fixed`).
+   - The profile is considered **stable** if: the max rate change across any 
+     `RateEntry` (input or output) is **≤ 1 unit/s** (absolute difference between 
+     max and min observed over the 20-tick window).
+   - If a cell is `Dirty` or rates are not stable, `profile.valid` is set to `false` 
+     and the LOD scheduler keeps the cell active (F01 S04).
+
+3. Once stable (both conditions below hold), the system locks the profile and clears 
+   `Dirty`:
+   - `profile.valid = true` for 2 consecutive ticks.
+   - `Dirty == false`.
+
 4. The profile must be accurate enough that coarse simulation matches fine simulation
    within tolerance ε (`03-simulation-lod.md` §7).
+
+### Dirty flag lifecycle
+- **Set:** A cell is marked `Dirty` when any of these commands succeed: `place` 
+  (any building), `remove` (any building), `configureAssembler` (any recipe change).
+- **Preserved on promotion:** When a cell is promoted from coarse to fine (F01 S06), 
+  the `Dirty` flag is preserved; the cell continues warm-up.
+- **Cleared on stabilization:** When the profile becomes stable and `valid = true` 
+  for 2 consecutive ticks, `Dirty` is cleared in that tick.
+- **Preserved on demotion:** When a cell is demoted from fine to coarse, the `Dirty` 
+  flag is *not* cleared; it carries forward so that if the cell is promoted again, 
+  it is aware the profile may be stale.
 
 ## Data touched
 `ProductionProfile` (write), `Dirty` (clear), reads `OutputPort`/belt/assembler state.

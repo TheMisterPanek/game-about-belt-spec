@@ -23,6 +23,19 @@ fixed order. Other features attach their components and register their systems h
 ## Data touched
 All component families (`01-ecs-model.md` §3); the system schedule (§5).
 
+### Entity ID assignment
+Entity IDs are globally unique 64-bit integers, assigned monotonically:
+- The first entity spawned gets `id = 1`, the second gets `id = 2`, etc.
+- IDs never wrap, reuse, or go backward.
+- When an active cell is demoted (F01 S06), its micro entities are deleted; their 
+  IDs are consumed and never reused.
+- When a cell is promoted again, its micro entities are created with new IDs 
+  (the next available from the global counter).
+
+**Why:** Ascending ID iteration is stable and deterministic given the command 
+sequence. If systems iterate entities in ascending ID order, they process them in 
+creation order, which is deterministic and reproducible.
+
 ## Acceptance criteria
 - **AC-1** *Given* two entities matching a system's query, *then* the system
   processes them in ascending-id order (or the declared key) on every run.
@@ -32,6 +45,8 @@ All component families (`01-ecs-model.md` §3); the system schedule (§5).
   simulation-affecting state changes as a result (isolation holds).
 - **AC-4** *Given* identical component data, *then* a system produces identical writes
   regardless of internal storage layout.
+- **AC-5** *When* a cell is promoted, *then* its micro entities are assigned new, 
+  monotonically increasing IDs (never reused from before demotion).
 
 ## Out of scope
 The behavior of individual systems (owned by F05–F08); parallel execution details
