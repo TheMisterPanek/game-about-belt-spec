@@ -1,0 +1,13 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local Claude Code settings (keep out of the public repo)
+.claude/settings.local.json
+
+# Per-implementation progress copies (the template PROGRESS.md is tracked)
+PROGRESS.*.md
